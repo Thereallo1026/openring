@@ -1,18 +1,36 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Bind resources to your worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
+import { OpenAPIHono } from "@hono/zod-openapi";
+import { Scalar } from "@scalar/hono-api-reference";
+import routes from "./routes";
 
-export default {
-	async fetch(request, env, ctx): Promise<Response> {
-		return new Response('Hello World!');
-	},
-} satisfies ExportedHandler<Env>;
+const app = new OpenAPIHono<{ Bindings: Env }>();
+
+app.openAPIRegistry.registerComponent("securitySchemes", "Bearer", {
+  type: "http",
+  scheme: "bearer",
+  bearerFormat: "Token",
+  description: "Bearer token for admin endpoints.",
+});
+
+app.doc("/openapi.json", {
+  openapi: "3.1.0",
+  info: {
+    title: "OpenRing API",
+    version: "0.1.0",
+    description: "An open-source webring API built with Cloudflare Workers",
+  },
+});
+
+app.get(
+  "/docs",
+  Scalar({
+    url: "/openapi.json",
+    pageTitle: "OpenRing API Documentation",
+    theme: "default",
+  })
+);
+
+app.get("/", (c) => c.redirect("/docs"));
+
+app.route("/", routes);
+
+export default app;

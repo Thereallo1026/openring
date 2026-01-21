@@ -1,0 +1,160 @@
+---
+alwaysApply: true
+---
+# OpenRing - Webring API
+
+## Project Overview
+
+OpenRing is an open-source webring API built with Cloudflare Workers. It provides a modern, serverless infrastructure for creating and managing webrings - a retro web navigation system that connects websites in a circular chain.
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Runtime | Cloudflare Workers |
+| Framework | Hono |
+| Language | TypeScript |
+| Storage | Cloudflare KV |
+| Validation | Zod |
+| API Docs | @hono/zod-openapi |
+| API UI | @scalar/hono-api-reference |
+| Package Manager | Bun |
+
+## Core Data Types
+
+### Site
+
+```typescript
+interface Site {
+  url: string;          // Full URL as provided (e.g., "https://example.com")
+  name: string;         // Display name
+  image?: string;       // Banner/avatar URL
+  description?: string; // Short description
+}
+```
+
+### NavigationResult
+
+```typescript
+interface NavigationResult {
+  site: Site;
+  position: number;     // 1-indexed position in ring
+  total: number;        // Total sites in ring
+}
+```
+
+### SitesList
+
+```typescript
+interface SitesList {
+  sites: Site[];
+}
+```
+
+## API Endpoints
+
+### Navigation (Public)
+
+- `GET /next?url={url}` - Get next site in ring
+- `GET /prev?url={url}` - Get previous site in ring
+- `GET /random` - Get random site
+- `GET /list` - List all sites
+
+Query Parameters:
+- `url` - Full URL to navigate from
+- `redirect` - If `true`, returns 302 redirect instead of JSON
+- `exclude` - For `/random`, exclude this URL from results
+
+### Admin (Protected with Bearer Token)
+
+- `POST /admin/sites` - Add a site
+- `DELETE /admin/sites` - Remove a site
+- `GET /admin/sites` - List sites (admin view)
+
+### Documentation
+
+- `GET /openapi.json` - OpenAPI specification
+- `GET /docs` - Interactive API documentation (Scalar UI)
+- `GET /` - Redirect to /docs
+
+## Storage Schema (KV)
+
+Key: `sites:list`
+
+```json
+{
+  "sites": [
+    {
+      "url": "https://example.com",
+      "name": "Example Site",
+      "image": "https://example.com/banner.png",
+      "description": "A cool website"
+    }
+  ]
+}
+```
+
+## Environment Variables
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `OPENRING_KV` | KV Binding | Cloudflare KV namespace |
+| `ADMIN_TOKEN` | Secret | Bearer token for admin endpoints |
+
+## Development Commands
+
+```bash
+bun run dev         # Start local development server
+bun run deploy      # Deploy to Cloudflare Workers
+bun run cf-typegen  # Regenerate Cloudflare types
+bun format
+```
+
+## Code Guidelines
+
+### TypeScript
+
+- Always use strict TypeScript with proper typing
+- Use functional patterns, avoid classes where possible
+- Export interfaces from `src/types/index.ts`
+- Use Zod schemas from `src/schemas/index.ts` for validation
+
+### Hono Framework
+
+- Use `@hono/zod-openapi` for route definitions with OpenAPI support
+- Define routes in separate files under `src/routes/`
+- Use middleware for cross-cutting concerns (auth, logging)
+
+### Cloudflare Workers
+
+- Access KV via `c.env.OPENRING_KV`
+- Access secrets via `c.env.ADMIN_TOKEN`
+- Types are generated in `worker-configuration.d.ts`
+
+### Validation
+
+- All input validation uses Zod schemas
+- Schemas should be defined in `src/schemas/index.ts`
+- Use `.openapi()` method for OpenAPI metadata
+
+### Repository Pattern
+
+- KV operations go in `src/repositories/`
+- Business logic goes in `src/services/`
+- Keep routes thin - delegate to services
+
+### Error Handling
+
+- Return appropriate HTTP status codes
+- Use consistent error response format
+- Handle KV operation failures gracefully
+
+## Widget Integration Example
+
+```html
+<div id="webring">
+  <a href="https://openring.workers.dev/prev?url=https://mysite.com&redirect=true">Prev</a>
+  <a href="https://openring.workers.dev/list">Ring</a>
+  <a href="https://openring.workers.dev/next?url=https://mysite.com&redirect=true">Next</a>
+</div>
+```
