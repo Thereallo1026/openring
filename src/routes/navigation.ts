@@ -5,6 +5,7 @@ import {
   NavigationQuerySchema,
   NavigationResultSchema,
 } from "../schemas/navigation";
+import { getSitesList } from "../utils";
 
 const navigation = new OpenAPIHono<{ Bindings: Env }>();
 
@@ -48,21 +49,31 @@ const getNextRoute = createRoute({
   },
 });
 
-navigation.openapi(getNextRoute, (c) => {
+navigation.openapi(getNextRoute, async (c) => {
   const { url, redirect } = c.req.valid("query");
+  const sitesList = await getSitesList(c.env.OPENRING_KV);
+  const sites = sitesList.sites;
 
-  if (redirect) {
-    return c.redirect("https://example.com", 302);
+  if (sites.length === 0) {
+    return c.json({ error: "Webring is empty" }, 404);
+  }
+
+  const currentIndex = sites.findIndex((site) => site.url === url);
+  if (currentIndex === -1) {
+    return c.json({ error: "Site not found in webring" }, 404);
+  }
+
+  const nextIndex = (currentIndex + 1) % sites.length;
+  const nextSite = sites[nextIndex];
+
+  if (redirect === true) {
+    return c.redirect(nextSite.url, 302);
   }
 
   return c.json({
-    site: {
-      url,
-      name: "Next Site",
-      description: "The next site in the ring",
-    },
-    position: 2,
-    total: 10,
+    site: nextSite,
+    position: nextIndex + 1,
+    total: sites.length,
   });
 });
 
@@ -106,21 +117,31 @@ const getPrevRoute = createRoute({
   },
 });
 
-navigation.openapi(getPrevRoute, (c) => {
+navigation.openapi(getPrevRoute, async (c) => {
   const { url, redirect } = c.req.valid("query");
+  const sitesList = await getSitesList(c.env.OPENRING_KV);
+  const sites = sitesList.sites;
 
-  if (redirect) {
-    return c.redirect("https://example.com", 302);
+  if (sites.length === 0) {
+    return c.json({ error: "Webring is empty" }, 404);
+  }
+
+  const currentIndex = sites.findIndex((site) => site.url === url);
+  if (currentIndex === -1) {
+    return c.json({ error: "Site not found in webring" }, 404);
+  }
+
+  const prevIndex = (currentIndex - 1 + sites.length) % sites.length;
+  const prevSite = sites[prevIndex];
+
+  if (redirect === true) {
+    return c.redirect(prevSite.url, 302);
   }
 
   return c.json({
-    site: {
-      url,
-      name: "Previous Site",
-      description: "The previous site in the ring",
-    },
-    position: 1,
-    total: 10,
+    site: prevSite,
+    position: prevIndex + 1,
+    total: sites.length,
   });
 });
 
@@ -145,24 +166,46 @@ const getRandomRoute = createRoute({
     302: {
       description: "Redirect to a random site (when redirect=true)",
     },
+    404: {
+      content: {
+        "application/json": {
+          schema: ErrorSchema,
+        },
+      },
+      description: "No sites available in webring",
+    },
   },
 });
 
-navigation.openapi(getRandomRoute, (c) => {
-  const { redirect } = c.req.valid("query");
+navigation.openapi(getRandomRoute, async (c) => {
+  const { exclude, redirect } = c.req.valid("query");
+  const sitesList = await getSitesList(c.env.OPENRING_KV);
+  const sites = sitesList.sites;
 
-  if (redirect) {
-    return c.redirect("https://random-site.com", 302);
+  if (sites.length === 0) {
+    return c.json({ error: "Webring is empty" }, 404);
+  }
+
+  const availableSites = exclude
+    ? sites.filter((site) => site.url !== exclude)
+    : sites;
+
+  if (availableSites.length === 0) {
+    return c.json({ error: "No other sites available in webring" }, 404);
+  }
+
+  const randomIndex = Math.floor(Math.random() * availableSites.length);
+  const randomSite = availableSites[randomIndex];
+  const originalIndex = sites.findIndex((site) => site.url === randomSite.url);
+
+  if (redirect === true) {
+    return c.redirect(randomSite.url, 302);
   }
 
   return c.json({
-    site: {
-      url: "https://random-site.com",
-      name: "Random Site",
-      description: "A randomly selected site",
-    },
-    position: 5,
-    total: 10,
+    site: randomSite,
+    position: originalIndex + 1,
+    total: sites.length,
   });
 });
 
@@ -184,21 +227,9 @@ const getListRoute = createRoute({
   },
 });
 
-navigation.openapi(getListRoute, (c) => {
-  return c.json({
-    sites: [
-      {
-        url: "https://example1.com",
-        name: "Example Site 1",
-        description: "First example site",
-      },
-      {
-        url: "https://example2.com",
-        name: "Example Site 2",
-        description: "Second example site",
-      },
-    ],
-  });
+navigation.openapi(getListRoute, async (c) => {
+  const sitesList = await getSitesList(c.env.OPENRING_KV);
+  return c.json(sitesList);
 });
 
 export default navigation;

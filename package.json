@@ -2,7 +2,7 @@
   "name": "openring",
   "version": "0.1.0",
   "author": "Thereallo",
-  "private": true,
+  "license": "MIT",
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
@@ -12,23 +12,23 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.11",
-    "@cloudflare/vitest-pool-workers": "^0.12.4",
+    "@cloudflare/vitest-pool-workers": "^0.12.5",
     "lint-staged": "^16.2.7",
-    "typescript": "^5.5.2",
+    "typescript": "^5.9.3",
     "ultracite": "7.0.12",
     "wrangler": "^4.59.3"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [
-      "bun x ultracite fix"
+      "bunx ultracite fix"
     ]
   },
   "dependencies": {
     "@hono/swagger-ui": "^0.5.3",
     "@hono/zod-openapi": "^1.2.0",
     "@scalar/hono-api-reference": "^0.9.35",
-    "@types/node": "^25.0.9",
-    "hono": "^4.11.4",
+    "@types/node": "^25.0.10",
+    "hono": "^4.11.5",
     "zod": "^4.3.5"
   }
 }

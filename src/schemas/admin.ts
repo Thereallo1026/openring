@@ -21,6 +21,12 @@ export const AddSiteBodySchema = z
   })
   .openapi({
     description: "Request body for adding a new site to the webring",
+    example: {
+      url: "https://example.com",
+      name: "Example Site",
+      image: "https://example.com/banner.png",
+      description: "A cool website",
+    },
   });
 
 export const DeleteSiteBodySchema = z
@@ -32,4 +38,7 @@ export const DeleteSiteBodySchema = z
   })
   .openapi({
     description: "Request body for removing a site from the webring",
+    example: {
+      url: "https://example.com",
+    },
   });

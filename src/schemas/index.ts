@@ -3,16 +3,15 @@ import { z } from "@hono/zod-openapi";
 export const ErrorSchema = z
   .object({
     error: z.string().openapi({
-      example: "Invalid request",
+      example: "Site not found in webring",
       description: "Error message describing what went wrong",
-    }),
-    code: z.string().optional().openapi({
-      example: "VALIDATION_ERROR",
-      description: "Error code for programmatic handling",
     }),
   })
   .openapi({
     description: "Standard error response format",
+    example: {
+      error: "Site not found in webring",
+    },
   });
 
 export const SiteSchema = z
@@ -36,6 +35,12 @@ export const SiteSchema = z
   })
   .openapi({
     description: "A site in the webring",
+    example: {
+      url: "https://example.com",
+      name: "Example Site",
+      image: "https://example.com/banner.png",
+      description: "A cool website",
+    },
   });
 
 export const SitesListSchema = z
@@ -46,4 +51,14 @@ export const SitesListSchema = z
   })
   .openapi({
     description: "List of all sites in the webring",
+    example: {
+      sites: [
+        {
+          url: "https://example.com",
+          name: "Example Site",
+          image: "https://example.com/banner.png",
+          description: "A cool website",
+        },
+      ],
+    },
   });

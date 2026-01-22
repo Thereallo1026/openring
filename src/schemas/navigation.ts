@@ -64,4 +64,14 @@ export const NavigationResultSchema = z
   })
   .openapi({
     description: "Navigation result with site information and position",
+    example: {
+      site: {
+        url: "https://example.com",
+        name: "Example Site",
+        image: "https://example.com/banner.png",
+        description: "A cool website",
+      },
+      position: 1,
+      total: 10,
+    },
   });

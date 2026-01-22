@@ -1,16 +1,18 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { ErrorSchema, SiteSchema } from "../schemas";
 import { AddSiteBodySchema, DeleteSiteBodySchema } from "../schemas/admin";
+import type { Site } from "../types";
+import { getSitesList, saveSitesList } from "../utils";
 
 const admin = new OpenAPIHono<{ Bindings: Env }>();
 
+// middleware
 admin.use("*", async (c, next) => {
   const authHeader = c.req.header("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return c.json(
       {
-        error: "Unauthorized - missing or invalid Authorization header",
-        code: "MISSING_TOKEN",
+        error: "Unauthorized. Missing or invalid Authorization header",
       },
       401
     );
@@ -22,8 +24,7 @@ admin.use("*", async (c, next) => {
   if (!adminToken || token !== adminToken) {
     return c.json(
       {
-        error: "Unauthorized - invalid admin token",
-        code: "INVALID_TOKEN",
+        error: "Unauthorized. Invalid admin token",
       },
       401
     );
@@ -37,7 +38,7 @@ const addSiteRoute = createRoute({
   path: "/admin/sites",
   tags: ["Admin"],
   summary: "Add a site",
-  description: "Add a new site to the webring (requires admin token)",
+  description: "Add a new site to the webring",
   security: [
     {
       Bearer: [],
@@ -75,7 +76,7 @@ const addSiteRoute = createRoute({
           schema: ErrorSchema,
         },
       },
-      description: "Unauthorized - invalid or missing admin token",
+      description: "Unauthorized. Invalid or missing admin token",
     },
     409: {
       content: {
@@ -85,21 +86,52 @@ const addSiteRoute = createRoute({
       },
       description: "Site already exists in the webring",
     },
+    500: {
+      content: {
+        "application/json": {
+          schema: ErrorSchema,
+        },
+      },
+      description: "Failed to add site",
+    },
   },
 });
 
-admin.openapi(addSiteRoute, (c) => {
+admin.openapi(addSiteRoute, async (c) => {
   const body = c.req.valid("json");
 
-  return c.json(
-    {
-      url: body.url,
-      name: body.name,
-      image: body.image,
-      description: body.description,
-    },
-    201
-  );
+  const site: Site = {
+    url: body.url,
+    name: body.name,
+    image: body.image,
+    description: body.description,
+  };
+
+  try {
+    const list = await getSitesList(c.env.OPENRING_KV);
+    const exists = list.sites.some((item) => item.url === site.url);
+    if (exists) {
+      return c.json(
+        {
+          error: "Site already exists in the webring",
+        },
+        409
+      );
+    }
+
+    const updated = {
+      sites: [...list.sites, site],
+    };
+    await saveSitesList(c.env.OPENRING_KV, updated);
+    return c.json(site, 201);
+  } catch {
+    return c.json(
+      {
+        error: "Failed to add site",
+      },
+      500
+    );
+  }
 });
 
 const deleteSiteRoute = createRoute({
@@ -107,7 +139,7 @@ const deleteSiteRoute = createRoute({
   path: "/admin/sites",
   tags: ["Admin"],
   summary: "Remove a site",
-  description: "Remove a site from the webring (requires admin token)",
+  description: "Remove a site from the webring",
   security: [
     {
       Bearer: [],
@@ -145,7 +177,7 @@ const deleteSiteRoute = createRoute({
           schema: ErrorSchema,
         },
       },
-      description: "Unauthorized - invalid or missing admin token",
+      description: "Unauthorized. Invalid or missing admin token",
     },
     404: {
       content: {
@@ -155,20 +187,46 @@ const deleteSiteRoute = createRoute({
       },
       description: "Site not found in webring",
     },
+    500: {
+      content: {
+        "application/json": {
+          schema: ErrorSchema,
+        },
+      },
+      description: "Failed to remove site",
+    },
   },
 });
 
-admin.openapi(deleteSiteRoute, (c) => {
+admin.openapi(deleteSiteRoute, async (c) => {
   const body = c.req.valid("json");
 
-  return c.json(
-    {
-      url: body.url,
-      name: "Removed Site",
-      description: "This site was removed",
-    },
-    200
-  );
+  try {
+    const list = await getSitesList(c.env.OPENRING_KV);
+    const index = list.sites.findIndex((item) => item.url === body.url);
+    if (index === -1) {
+      return c.json(
+        {
+          error: "Site not found in webring",
+        },
+        404
+      );
+    }
+
+    const [removed] = list.sites.splice(index, 1);
+    const updated = {
+      sites: list.sites,
+    };
+    await saveSitesList(c.env.OPENRING_KV, updated);
+    return c.json(removed, 200);
+  } catch {
+    return c.json(
+      {
+        error: "Failed to remove site",
+      },
+      500
+    );
+  }
 });
 
 export default admin;
