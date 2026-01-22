@@ -213,9 +213,9 @@ admin.openapi(deleteSiteRoute, async (c) => {
       );
     }
 
-    const [removed] = list.sites.splice(index, 1);
+    const removed = list.sites[index];
     const updated = {
-      sites: list.sites,
+      sites: list.sites.filter((_, i) => i !== index),
     };
     await saveSitesList(c.env.OPENRING_KV, updated);
     return c.json(removed, 200);
