@@ -2,6 +2,16 @@
 
 An open-source webring API built with Cloudflare Workers. Create and manage webrings - a retro web navigation system that connects websites in a circular chain.
 
+## Why?
+
+Traditional webrings require every member site to implement navigation logic. OpenRing centralizes this - members just add anchor tags:
+
+​```html
+<a href="https://ring.example/next?url=mysite.com&redirect=true">Next ></a>
+​```
+
+No JavaScript required. No logic to maintain. Deploy once, invite members.
+
 ## Features
 
 - Navigate between sites (next, previous, random)
@@ -157,7 +167,6 @@ An open-source webring API built with Cloudflare Workers. Create and manage webr
 |----------|-------------|
 | `POST /admin/sites` | Add a site to the webring |
 | `DELETE /admin/sites` | Remove a site from the webring |
-| `GET /admin/sites` | List all sites (admin view) |
 
 **Authentication:**
 
